@@ -19,7 +19,6 @@ class Esh
       elsif line.match /^cd /
         d = line[3, line.length]
         d = File.expand_path(d)
-        p d
         Dir.chdir d
       else
         result=eval(line, @scope.binding)
@@ -46,14 +45,15 @@ class Esh
   end
 
   def repl()
+    history = []
     while line = Readline.readline("#{Dir.pwd}$ ", true)
+      history << line
       Readline::HISTORY.pop if /^\s*$/ =~ line
+      history.pop if /^\s*$/ =~ line
 
-      begin
-        if Readline::HISTORY[Readline::HISTORY.length-2] == line
-          #Readline::HISTORY.pop
-        end
-      rescue IndexError
+      if history.length > 1 && history[history.length-2] == line
+        Readline::HISTORY.pop
+        history.pop
       end
 
       if line.include?(';')
