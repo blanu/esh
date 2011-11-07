@@ -40,3 +40,6 @@ while l = Readline.readline("#{Dir.pwd}$ ", true)
     p e
   end
 end
+
+puts ''
+
