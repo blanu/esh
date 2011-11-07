@@ -9,17 +9,7 @@ Readline.completion_proc = Proc.new do |s|
   (methods+Dir[s+'*']).grep(/^#{Regexp.escape(s)}/)
 end
 
-while l = Readline.readline("#{Dir.pwd}$ ", true)
-
-  Readline::HISTORY.pop if /^\s*$/ =~ l
-
-  begin
-    if Readline::HISTORY[Readline::HISTORY.length-2] == l
-      Readline::HISTORY.pop
-    end
-  rescue IndexError
-  end
-
+def shellEval(l)
   begin
     if l.match /^cd$/
       Dir.chdir
@@ -41,5 +31,24 @@ while l = Readline.readline("#{Dir.pwd}$ ", true)
   end
 end
 
-puts ''
+while l = Readline.readline("#{Dir.pwd}$ ", true)
+  Readline::HISTORY.pop if /^\s*$/ =~ l
 
+  begin
+    if Readline::HISTORY[Readline::HISTORY.length-2] == l
+      Readline::HISTORY.pop
+    end
+  rescue IndexError
+  end
+  
+  if l.include?(';')
+    parts = l.split(';')
+    for part in parts
+      shellEval(part)
+    end
+  else
+    shellEval(l)
+  end
+end
+
+puts ''
