@@ -1,4 +1,5 @@
 require "readline"
+require "open4"
 
 class Esh
   def initialize()
@@ -37,11 +38,14 @@ class Esh
           exec line
         end
         Process.waitpid @active_pid
-        @active_pid = nil
       else
-        result = `#{line}`
+        status  = Open4.open4(line) do |pid, stdin, stdout, stderr|
+          @active_pid = pid
+          result = stdout.read
+        end
         eval("_ = \"#{result}\"", @scope.binding)
       end
+      @active_pid = nil
     rescue StandardError => e
       puts "FAIL"
       p e
