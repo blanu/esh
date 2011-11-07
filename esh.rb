@@ -22,7 +22,10 @@ class Esh
         p d
         Dir.chdir d
       else
-        puts(eval(line, @scope.binding))
+        result=eval(line, @scope.binding)
+        if !result.nil?
+          puts(result)
+        end
       end
     rescue SyntaxError, NameError => e
       line = "\"" + line.split(" ").join("\" + \" ") + "\""
