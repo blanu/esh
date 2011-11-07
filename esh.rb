@@ -9,45 +9,45 @@ Readline.completion_proc = Proc.new do |s|
   (methods+Dir[s+'*']).grep(/^#{Regexp.escape(s)}/)
 end
 
-def shellEval(l)
+def shellEval(line)
   begin
-    if l.match /^cd$/
+    if line.match /^cd$/
       Dir.chdir
-    elsif l.match /^cd /
-      d = l[3, l.length]
+    elsif line.match /^cd /
+      d = l[3, line.length]
       d = File.expand_path(d)
       p d
       Dir.chdir d
     else
-      puts(eval(l, scope.binding))
+      puts(eval(line, scope.binding))
     end
   rescue SyntaxError, NameError => e
-    l = "\"" + l.split(" ").join("\" + \" ") + "\""
-    l = eval(l)
-    puts `#{l}`
+    line = "\"" + line.split(" ").join("\" + \" ") + "\""
+    line = eval(line)
+    puts `#{line}`
   rescue StandardError => e
     puts "FAIL"
     p e
   end
 end
 
-while l = Readline.readline("#{Dir.pwd}$ ", true)
-  Readline::HISTORY.pop if /^\s*$/ =~ l
+while line = Readline.readline("#{Dir.pwd}$ ", true)
+  Readline::HISTORY.pop if /^\s*$/ =~ line
 
   begin
-    if Readline::HISTORY[Readline::HISTORY.length-2] == l
+    if Readline::HISTORY[Readline::HISTORY.length-2] == line
       Readline::HISTORY.pop
     end
   rescue IndexError
   end
   
-  if l.include?(';')
-    parts = l.split(';')
+  if line.include?(';')
+    parts = line.split(';')
     for part in parts
       shellEval(part)
     end
   else
-    shellEval(l)
+    shellEval(line)
   end
 end
 
