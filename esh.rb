@@ -14,7 +14,7 @@ def shellEval(line)
     if line.match /^cd$/
       Dir.chdir
     elsif line.match /^cd /
-      d = l[3, line.length]
+      d = line[3, line.length]
       d = File.expand_path(d)
       p d
       Dir.chdir d
