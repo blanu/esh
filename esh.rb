@@ -30,13 +30,16 @@ class Esh
     rescue SyntaxError, NameError => e
       line = "\"" + line.split(" ").join("\" + \" ") + "\""
       line = eval(line)
-      puts `#{line}`
+      pid = Process.fork do
+        exec line
+      end
+      Process.waitpid pid
     rescue StandardError => e
       puts "FAIL"
       p e
     end
   end
-  
+
   def repl()
     while line = Readline.readline("#{Dir.pwd}$ ", true)
       Readline::HISTORY.pop if /^\s*$/ =~ line
@@ -47,7 +50,7 @@ class Esh
         end
       rescue IndexError
       end
-  
+
       if line.include?(';')
         parts = line.split(';')
         for part in parts
@@ -56,8 +59,8 @@ class Esh
       else
         shell_eval(line)
       end
-    end  
-    
+    end
+
     puts ''
   end
 end
