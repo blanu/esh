@@ -5,7 +5,7 @@ class Esh
     stty_save = `stty -g`.chomp
     trap("INT") { system "stty", stty_save; exit }
     #trap("INT", "SIG_IGN")
-    scope = Proc.new {}
+    @scope = Proc.new {}
 
     Readline.completion_proc = Proc.new do |s|
       (methods+Dir[s+'*']).grep(/^#{Regexp.escape(s)}/)
@@ -22,7 +22,7 @@ class Esh
         p d
         Dir.chdir d
       else
-        puts(eval(line, scope.binding))
+        puts(eval(line, @scope.binding))
       end
     rescue SyntaxError, NameError => e
       line = "\"" + line.split(" ").join("\" + \" ") + "\""
