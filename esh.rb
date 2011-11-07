@@ -12,7 +12,7 @@ class Esh
     end
   end
 
-  def shell_eval(line)
+  def shell_eval(line, fork=true)
     begin
       if line.match /^cd$/
         Dir.chdir
@@ -30,10 +30,15 @@ class Esh
     rescue SyntaxError, NameError => e
       line = "\"" + line.split(" ").join("\" + \" ") + "\""
       line = eval(line)
-      pid = Process.fork do
-        exec line
+      if fork:
+        pid = Process.fork do
+          exec line
+        end
+        Process.waitpid pid
+      else
+        result=`#{line}`
+        eval("_=\"#{result}\"", @scope.binding)
       end
-      Process.waitpid pid
     rescue StandardError => e
       puts "FAIL"
       p e
@@ -56,6 +61,11 @@ class Esh
         for part in parts
           shell_eval(part)
         end
+      elsif line.include?('|')
+        parts = line.split('|')
+        for part in parts
+          shell_eval(part, false)
+        end        
       else
         shell_eval(line)
       end
