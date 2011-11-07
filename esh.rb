@@ -2,9 +2,14 @@ require "readline"
 
 class Esh
   def initialize()
+    @active_pid = nil
     stty_save = `stty -g`.chomp
-    trap("INT") { system "stty", stty_save; exit }
-    #trap("INT", "SIG_IGN")
+    #trap("INT") { system "stty", stty_save }
+    trap("INT") do
+      if !@active_pid.nil?
+        Process.kill "SIGINT", @active_pid
+      end
+    end
     @scope = Proc.new {}
 
     Readline.completion_proc = Proc.new do |s|
@@ -28,13 +33,14 @@ class Esh
       line = "\"" + line.split(" ").join("\" + \" ") + "\""
       line = eval(line)
       if fork:
-        pid = Process.fork do
+        @active_pid = Process.fork do
           exec line
         end
-        Process.waitpid pid
+        Process.waitpid @active_pid
+        @active_pid = nil
       else
-        result=`#{line}`
-        eval("_=\"#{result}\"", @scope.binding)
+        result = `#{line}`
+        eval("_ = \"#{result}\"", @scope.binding)
       end
     rescue StandardError => e
       puts "FAIL"
