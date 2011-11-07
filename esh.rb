@@ -51,7 +51,7 @@ class Esh
 
       begin
         if Readline::HISTORY[Readline::HISTORY.length-2] == line
-          Readline::HISTORY.pop
+          #Readline::HISTORY.pop
         end
       rescue IndexError
       end
@@ -65,7 +65,7 @@ class Esh
         parts = line.split('|')
         for part in parts
           shell_eval(part, false)
-        end        
+        end
       else
         shell_eval(line)
       end
