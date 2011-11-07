@@ -17,9 +17,7 @@ class Esh
       if line.match /^cd$/
         Dir.chdir
       elsif line.match /^cd /
-        d = line[3, line.length]
-        d = File.expand_path(d)
-        Dir.chdir d
+        Dir.chdir File.expand_path(line.split(" ", 2)[1])
       else
         result=eval(line, @scope.binding)
         if !result.nil?
