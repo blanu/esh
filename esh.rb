@@ -18,37 +18,49 @@ class Esh
     end
   end
 
-  def shell_eval(line, fork=true)
+  def shell_attempt
     begin
-      if line.match /^cd$/
-        Dir.chdir
-      elsif line.match /^cd /
-        Dir.chdir File.expand_path(line.split(" ", 2)[1])
-      else
-        result=eval(line, @scope.binding)
-        if !result.nil?
-          puts(result)
-        end
-      end
-    rescue SyntaxError, NameError => e
-      line = "\"" + line.split(" ").join("\" + \" ") + "\""
-      line = eval(line)
-      if fork:
-        @active_pid = Process.fork do
-          exec line
-        end
-        Process.waitpid @active_pid
-      else
-        status  = Open4.open4(line) do |pid, stdin, stdout, stderr|
-          @active_pid = pid
-          result = stdout.read
-        end
-        eval("_ = \"#{result}\"", @scope.binding)
-      end
-      @active_pid = nil
+      yield
+    rescue Errno::ENOENT => e
+      puts e.message
     rescue StandardError => e
       puts "FAIL"
       p e
+    end
+  end
+
+  def shell_eval(line, fork=true)
+    shell_attempt() do
+      begin
+        if line.match /^cd$/
+          Dir.chdir
+        elsif line.match /^cd /
+          Dir.chdir File.expand_path(line.split(" ", 2)[1].strip)
+        else
+          result=eval(line, @scope.binding)
+          if !result.nil?
+            puts(result)
+          end
+        end
+      rescue SyntaxError, NameError => e
+        line = "\"" + line.split(" ").join("\" + \" ") + "\""
+        line = eval(line)
+        if fork
+          @active_pid = Process.fork do
+            shell_attempt do
+              exec line
+            end
+          end
+          Process.waitpid @active_pid
+        else
+          status = Open4.open4(line) do |pid, stdin, stdout, stderr|
+            @active_pid = pid
+            result = stdout.read
+          end
+          eval("_ = \"#{result}\"", @scope.binding)
+        end
+        @active_pid = nil
+      end
     end
   end
 
