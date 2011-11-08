@@ -9,7 +9,11 @@ $ 1+2
 $ ls
 README
 esh.rb
-open4.rb
+
+$ x = "."
+$ ls #{x}
+README
+esh.rb
 
 $ ls | _.split("\n").size()
 3
