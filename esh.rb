@@ -81,8 +81,8 @@ class Esh
         for part in parts
           shell_eval(part)
         end
-      elsif line.include?('|')
-        parts = line.split('|')
+      elsif line.include?(' | ')
+        parts = line.split(' | ')
         for part in parts
           shell_eval(part, false)
         end
