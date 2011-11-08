@@ -1,5 +1,8 @@
+#! /usr/bin/env ruby
 require "readline"
 require "open4"
+require "etc"
+require "socket"
 
 class Esh
   def initialize()
@@ -66,7 +69,7 @@ class Esh
 
   def repl()
     history = []
-    while line = Readline.readline("#{Dir.pwd}$ ", true)
+    while line = Readline.readline("#{Etc.getlogin}@#{Socket.gethostname.split(".")[0]}:#{Dir.pwd.sub(ENV["HOME"], "~")}$ ", true)
       history << line
       Readline::HISTORY.pop if /^\s*$/ =~ line
       history.pop if /^\s*$/ =~ line
