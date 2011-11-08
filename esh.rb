@@ -15,7 +15,7 @@ class Esh
       end
     end
     @scope = Proc.new {}
-    @_=nil
+    @_ = nil
 
     Readline.completion_proc = Proc.new do |s|
       (methods+Dir[s+'*']).grep(/^#{Regexp.escape(s)}/)
@@ -43,8 +43,8 @@ class Esh
           Dir.chdir File.expand_path(line.split(" ", 2)[1].strip)
         else
           result = eval(line, @scope.binding)
-          if mode==:PIPE
-            @_=result
+          if mode == :PIPE
+            @_ = result
             eval("_ = \"#{result}\"", @scope.binding)
           else
             if !result.nil?
@@ -55,24 +55,24 @@ class Esh
       rescue SyntaxError, NameError => e
         line = "\"" + line.gsub("\"", "\\\"") + "\""
         line = eval(line, @scope.binding)
-        
-        if mode==:FORK
+
+        if mode == :FORK
           pid = Process.fork do
             exec line
           end
-          
-          Process.waitpid pid        
+
+          Process.waitpid pid
         else
           status = Open4.open4(line) do |pid, stdin, stdout, stderr|
             @active_pid = pid
-            if @_!=nil
+            if @_ != nil
               stdin.write(@_)
             end
             stdin.close()
             result = stdout.read
           end
-          if mode==:PIPE
-            @_=result
+          if mode ==: PIPE
+            @_ = result
             eval("_ = \"#{result}\"", @scope.binding)
           else
             if !result.nil?
@@ -105,12 +105,12 @@ class Esh
         end
       end
 
-      @_=nil
+      @_ = nil
 
       if line.include?(';')
         parts = line.split(';')
         for part in parts
-          @_=nil
+          @_ = nil
           shell_eval(part)
         end
       elsif line.include?(' | ')
@@ -121,9 +121,9 @@ class Esh
           shell_eval(parts[parts.size()-1], :ENDPIPE) # Eval last part and print result
       else
         shell_eval(line)
-      end      
+      end
     end
-    
+
     puts ''
   end
 end
