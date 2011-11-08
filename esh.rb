@@ -33,7 +33,8 @@ class Esh
     end
   end
 
-  def shell_eval(line, pipe=false)
+  # modes: :PIPE, :ENDPIPE, :FORK
+  def shell_eval(line, mode=:FORK)
     shell_attempt() do
       begin
         if line.match /^cd$/
@@ -42,8 +43,9 @@ class Esh
           Dir.chdir File.expand_path(line.split(" ", 2)[1].strip)
         else
           result = eval(line, @scope.binding)
-          if pipe
+          if mode==:PIPE
             @_=result
+            eval("_ = \"#{result}\"", @scope.binding)
           else
             if !result.nil?
               puts(result)
@@ -53,20 +55,29 @@ class Esh
       rescue SyntaxError, NameError => e
         line = "\"" + line.split(" ").join("\" + \" ") + "\""
         line = eval(line, @scope.binding)
-        status = Open4.open4(line) do |pid, stdin, stdout, stderr|
-          @active_pid = pid
-          if @_!=nil
-            stdin.write(@_)
+        
+        if mode==:FORK
+          pid = Process.fork do
+            exec line
           end
-          stdin.close()
-          result = stdout.read
-        end
-        if pipe
-          @_=result
-          eval("_ = \"#{result}\"", @scope.binding)
+          
+          Process.waitpid pid        
         else
-          if !result.nil?
-            puts(result)
+          status = Open4.open4(line) do |pid, stdin, stdout, stderr|
+            @active_pid = pid
+            if @_!=nil
+              stdin.write(@_)
+            end
+            stdin.close()
+            result = stdout.read
+          end
+          if mode==:PIPE
+            @_=result
+            eval("_ = \"#{result}\"", @scope.binding)
+          else
+            if !result.nil?
+              puts(result)
+            end
           end
         end
         @active_pid = nil
@@ -105,9 +116,9 @@ class Esh
       elsif line.include?(' | ')
         parts = line.split(' | ')
         for part in parts.slice(0,parts.size()-1) # Eval all but last part, piping result into next part
-          shell_eval(part, true)
+          shell_eval(part, :PIPE)
         end
-          shell_eval(parts[parts.size()-1], false) # Eval last part and print result
+          shell_eval(parts[parts.size()-1], :ENDPIPE) # Eval last part and print result
       else
         shell_eval(line)
       end      
