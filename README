@@ -1,2 +1,24 @@
 Esh (ʃ) is a programming friendly shell with a syntax suitable for both
 executing shell tasks and writing functions.
+
+Examples:
+
+$ 1+2
+3
+
+$ ls
+README
+esh.rb
+open4.rb
+
+$ ls | _.split("\n").size()
+3
+
+$ ['a', 'b', 'c'].join("\n")
+a
+b
+c
+
+$ ['a', 'b', 'c'].join("\n") | wc
+       2       3       5
+
