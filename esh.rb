@@ -68,15 +68,23 @@ class Esh
   end
 
   def repl()
-    history = []
+    begin
+      history = File.open(File.expand_path("~/.esh_history")).readlines
+    rescue
+      history = []
+    end
+    Readline::HISTORY.push(*history)
     while line = Readline.readline("#{Etc.getlogin}@#{Socket.gethostname.split(".")[0]}:#{Dir.pwd.sub(ENV["HOME"], "~")}$ ", true)
       history << line
-      Readline::HISTORY.pop if /^\s*$/ =~ line
-      history.pop if /^\s*$/ =~ line
 
-      if history.length > 1 && history[history.length-2] == line
+      if ((/^\s*$/ =~ line) ||
+          (history.length > 1 && history[history.length-2] == line))
         Readline::HISTORY.pop
         history.pop
+      else
+        File.open(File.expand_path("~/.esh_history"), "ab+") do |f|
+          f << line + "\n"
+        end
       end
 
       if line.include?(';')
