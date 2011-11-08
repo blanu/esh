@@ -71,7 +71,7 @@ class Esh
             stdin.close()
             result = stdout.read
           end
-          if mode ==: PIPE
+          if mode == :PIPE
             @_ = result
             eval("_ = \"#{result}\"", @scope.binding)
           else
@@ -118,7 +118,7 @@ class Esh
         for part in parts.slice(0,parts.size()-1) # Eval all but last part, piping result into next part
           shell_eval(part, :PIPE)
         end
-          shell_eval(parts[parts.size()-1], :ENDPIPE) # Eval last part and print result
+        shell_eval(parts[parts.size()-1], :ENDPIPE) # Eval last part and print result
       else
         shell_eval(line)
       end
