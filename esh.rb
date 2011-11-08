@@ -3,6 +3,7 @@ require "readline"
 require "open4"
 require "etc"
 require "socket"
+require "pp"
 
 class Esh
   def initialize()
@@ -48,7 +49,7 @@ class Esh
             eval("_ = \"#{result}\"", @scope.binding)
           else
             if !result.nil?
-              puts(result)
+              pp result
             end
           end
         end
