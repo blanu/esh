@@ -15,14 +15,16 @@ $ ls #{x}
 README
 esh.rb
 
-$ ls | _.split("\n").size()
+$ ls | _.split("\n").size
 3
 
 $ ['a', 'b', 'c'].join("\n")
+"a\nb\nc"
+
+$ puts ['a', 'b', 'c'].join("\n")
 a
 b
 c
 
 $ ['a', 'b', 'c'].join("\n") | wc
        2       3       5
-
