@@ -37,14 +37,14 @@ class Esh
         elsif line.match /^cd /
           Dir.chdir File.expand_path(line.split(" ", 2)[1].strip)
         else
-          result=eval(line, @scope.binding)
+          result = eval(line, @scope.binding)
           if !result.nil?
             puts(result)
           end
         end
       rescue SyntaxError, NameError => e
         line = "\"" + line.split(" ").join("\" + \" ") + "\""
-        line = eval(line)
+        line = eval(line, @scope.binding)
         if fork
           @active_pid = Process.fork do
             shell_attempt do
