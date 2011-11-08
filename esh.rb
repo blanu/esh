@@ -53,7 +53,7 @@ class Esh
           end
         end
       rescue SyntaxError, NameError => e
-        line = "\"" + line.split(" ").join("\" + \" ") + "\""
+        line = "\"" + line.gsub("\"", "\\\"") + "\""
         line = eval(line, @scope.binding)
         
         if mode==:FORK
