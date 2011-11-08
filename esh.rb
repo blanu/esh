@@ -15,6 +15,7 @@ class Esh
       end
     end
     @scope = Proc.new {}
+    @_=nil
 
     Readline.completion_proc = Proc.new do |s|
       (methods+Dir[s+'*']).grep(/^#{Regexp.escape(s)}/)
@@ -32,7 +33,7 @@ class Esh
     end
   end
 
-  def shell_eval(line, fork=true)
+  def shell_eval(line, pipe=false)
     shell_attempt() do
       begin
         if line.match /^cd$/
@@ -41,26 +42,32 @@ class Esh
           Dir.chdir File.expand_path(line.split(" ", 2)[1].strip)
         else
           result = eval(line, @scope.binding)
-          if !result.nil?
-            puts(result)
+          if pipe
+            @_=result
+          else
+            if !result.nil?
+              puts(result)
+            end
           end
         end
       rescue SyntaxError, NameError => e
         line = "\"" + line.split(" ").join("\" + \" ") + "\""
         line = eval(line, @scope.binding)
-        if fork
-          @active_pid = Process.fork do
-            shell_attempt do
-              exec line
-            end
+        status = Open4.open4(line) do |pid, stdin, stdout, stderr|
+          @active_pid = pid
+          if @_!=nil
+            stdin.write(@_)
           end
-          Process.waitpid @active_pid
-        else
-          status = Open4.open4(line) do |pid, stdin, stdout, stderr|
-            @active_pid = pid
-            result = stdout.read
-          end
+          stdin.close()
+          result = stdout.read
+        end
+        if pipe
+          @_=result
           eval("_ = \"#{result}\"", @scope.binding)
+        else
+          if !result.nil?
+            puts(result)
+          end
         end
         @active_pid = nil
       end
@@ -87,21 +94,25 @@ class Esh
         end
       end
 
+      @_=nil
+
       if line.include?(';')
         parts = line.split(';')
         for part in parts
+          @_=nil
           shell_eval(part)
         end
       elsif line.include?(' | ')
         parts = line.split(' | ')
-        for part in parts
-          shell_eval(part, false)
+        for part in parts.slice(0,parts.size()-1) # Eval all but last part, piping result into next part
+          shell_eval(part, true)
         end
+          shell_eval(parts[parts.size()-1], false) # Eval last part and print result
       else
         shell_eval(line)
-      end
+      end      
     end
-
+    
     puts ''
   end
 end
