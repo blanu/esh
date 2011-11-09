@@ -18,8 +18,9 @@ class Esh
     @scope = Proc.new {}
     @_ = nil
 
+    Readline.completion_append_character = ''
     Readline.completion_proc = Proc.new do |s|
-      (methods+Dir[s+'*']).grep(/^#{Regexp.escape(s)}/)
+      (methods+Dir[s+'*'].map { |x| x + "/" }).grep(/^#{Regexp.escape(s)}/)
     end
   end
 
@@ -87,10 +88,12 @@ class Esh
   end
 
   def repl()
+    history = []
     begin
-      history = File.open(File.expand_path("~/.esh_history")).readlines
+      File.open(File.expand_path("~/.esh_history")) do |f|
+        history = f.readlines.map { |x| x.chomp }.select { |x| !x.empty? }
+      end
     rescue
-      history = []
     end
     Readline::HISTORY.push(*history)
     while line = Readline.readline("#{Etc.getlogin}@#{Socket.gethostname.split(".")[0]}:#{Dir.pwd.sub(ENV["HOME"], "~")}$ ", true)
