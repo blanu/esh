@@ -4,24 +4,47 @@ require "open4"
 require "etc"
 require "socket"
 require "pp"
+require "irb"
+require "irb/completion"
 
 class Esh
   def initialize()
     @active_pid = nil
     stty_save = `stty -g`.chomp
     #trap("INT") { system "stty", stty_save }
-    trap("INT") do
-      if !@active_pid.nil?
-        Process.kill "SIGINT", @active_pid
+    ["INT", "TSTP"].each do |sig|
+      trap(sig) do
+        if !@active_pid.nil?
+          Process.kill sig, @active_pid
+        end
       end
     end
+
     @scope = Proc.new {}
     @_ = nil
 
-    Readline.completion_append_character = ''
+    IRB.setup self
+    IRB.conf[:MAIN_CONTEXT] = IRB::Irb.new.context
+    @workspace = IRB::WorkSpace.new(nil, @scope.binding)
+    IRB.conf[:MAIN_CONTEXT].workspace = @workspace
+    if Readline.respond_to?("basic_word_break_characters=")
+      Readline.basic_word_break_characters= " \t\n\"\\'`><=;|&{("
+    end
+    Readline.completion_append_character = nil
     Readline.completion_proc = Proc.new do |s|
+      if s =~ /^\//
+        irb_completions = []
+      else
+        irb_completions = IRB::InputCompletor::CompletionProc.call(s)
+      end
       s = File.expand_path(s)
-      (methods+Dir[s+'*'].map { |x| x + "/" }).grep(/^#{Regexp.escape(s)}/)
+      Dir[s+'*'].map do |x|
+        if File.directory? x
+          x + "/"
+        else
+          x
+        end
+      end.grep(/^#{Regexp.escape(s)}/) + irb_completions
     end
   end
 
@@ -45,10 +68,10 @@ class Esh
         elsif line.match /^cd /
           Dir.chdir File.expand_path(line.split(" ", 2)[1].strip)
         else
-          result = eval(line, @scope.binding)
+          result = @workspace.evaluate(nil, line)
           if mode == :PIPE
             @_ = result
-            eval("_ = \"#{result}\"", @scope.binding)
+            @workspace.evaluate(nil, "_ = \"#{result}\"")
           else
             if !result.nil?
               pp result
@@ -57,14 +80,14 @@ class Esh
         end
       rescue SyntaxError, NameError => e
         line = "\"" + line.gsub("\"", "\\\"") + "\""
-        line = eval(line, @scope.binding)
+        line = @workspace.evaluate(nil, line)
 
         if mode == :FORK
-          pid = Process.fork do
+          @active_pid = Process.fork do
             exec line
           end
 
-          Process.waitpid pid
+          Process.waitpid @active_pid, Process::WUNTRACED
         else
           status = Open4.open4(line) do |pid, stdin, stdout, stderr|
             @active_pid = pid
@@ -76,7 +99,7 @@ class Esh
           end
           if mode == :PIPE
             @_ = result
-            eval("_ = \"#{result}\"", @scope.binding)
+            @workspace.evaluate(nil, "_ = \"#{result}\"")
           else
             if !result.nil?
               puts(result)
