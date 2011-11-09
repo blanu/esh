@@ -20,6 +20,7 @@ class Esh
 
     Readline.completion_append_character = ''
     Readline.completion_proc = Proc.new do |s|
+      s = File.expand_path(s)
       (methods+Dir[s+'*'].map { |x| x + "/" }).grep(/^#{Regexp.escape(s)}/)
     end
   end
