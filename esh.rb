@@ -107,6 +107,7 @@ class Esh
       else
         File.open(File.expand_path("~/.esh_history"), "ab+") do |f|
           f << line + "\n"
+          f.flush
         end
       end
 
