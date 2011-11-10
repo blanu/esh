@@ -2,7 +2,7 @@
 
 A programming friendly Ruby/shell mashup with a syntax suitable for both executing shell tasks and writing functions.
 
-## Reasoning:
+### Reasoning:
 
 - We're tired of switching back and forth between repls and shells for common tasks.
 
@@ -10,20 +10,20 @@ A programming friendly Ruby/shell mashup with a syntax suitable for both executi
 
 - Not pure Ruby, because a shell should support our shared muscle memory for things like `cd ..`
 
-## Ruby on OS X is compiled against a fake readline library.  
+### Ruby on OS X is compiled against a fake readline library.  
 
 If you're on OS X, everything will be better if you do one of these things:
 
-### If you use rvm:
+#### If you use rvm:
 
     $ brew install readline
     $ rvm install 1.8.7 -C --with-readline-dir=/opt/local/
 
-### If you don't use rvm:
+#### If you don't use rvm:
 
 http://jorgebernal.info/2009/11/18/fixing-snow-leopard-ruby-readline/
 
-## Examples:
+### Examples:
 
     $ 1+2
     3
