@@ -1,5 +1,13 @@
-Esh (ʃ) is a programming friendly shell with a syntax suitable for both
+Esh (ʃ) is a programming friendly Ruby/shell mashup with a syntax suitable for both
 executing shell tasks and writing functions.
+
+Reasoning:
+
+- We're tired of switching back and forth between repls and shells for common tasks.
+
+- Ruby, because it is a popular modern language, and its Perl influence makes it compatible with many existing Unix shell conventions.
+
+- Not pure Ruby, because a shell should support our shared muscle memory for things like "cd ..".
 
 Examples:
 
