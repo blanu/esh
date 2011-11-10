@@ -8,7 +8,7 @@ A programming friendly Ruby/shell mashup with a syntax suitable for both executi
 
 - Ruby, because it is a popular modern language, and its Perl influence makes it compatible with many existing Unix shell conventions.
 
-- Not pure Ruby, because a shell should support our shared muscle memory for things like `cd ..`.
+- Not pure Ruby, because a shell should support our shared muscle memory for things like `cd ..`
 
 ## Ruby on OS X is compiled against a fake readline library.  
 
