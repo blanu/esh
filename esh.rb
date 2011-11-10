@@ -151,7 +151,7 @@ class Esh
     rescue
     end
     Readline::HISTORY.push(*history)
-    while line = Readline.readline("#{Etc.getlogin}@\e[31m#{Socket.gethostname.split(".")[0]}\e[0m:#{Dir.pwd.sub(ENV["HOME"], "~")}$ ", true)
+    while line = Readline.readline("#{Etc.getlogin}@\x01\e[31m\x02#{Socket.gethostname.split(".")[0]}\x01\e[0m\x02:#{Dir.pwd.sub(ENV["HOME"], "~")}$ ", true)
       history << line
 
       if ((/^\s*$/ =~ line) ||
