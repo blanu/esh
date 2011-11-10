@@ -93,6 +93,7 @@ class Esh
   # modes: :PIPE, :ENDPIPE, :FORK
   def shell_eval(line, mode=:FORK)
     shell_attempt() do
+      result = nil
       begin
         if line.match /^cd\s*$/
           Dir.chdir
@@ -109,8 +110,6 @@ class Esh
               pp result
             end
           end
-          @_ = result
-          @workspace.evaluate(nil, "_ = @_")
         end
       rescue SyntaxError, NameError => e
         line = "\"" + line.gsub("\"", "\\\"") + "\""
@@ -131,16 +130,16 @@ class Esh
             stdin.close()
             result = stdout.read
           end
-          if mode == :ENDPIPE || mode == :FORK
+          if mode == :ENDPIPE
             if !result.nil?
               puts(result)
             end
           end
-          @_ = result
-          @workspace.evaluate(nil, "_ = @_")
         end
         @active_pid = nil
       end
+      @_ = result
+      @workspace.evaluate(nil, "_ = @_")
     end
   end
 
