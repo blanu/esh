@@ -104,13 +104,13 @@ class Esh
           else
             result = @workspace.evaluate(nil, line)
           end
-          if mode == :PIPE || mode == :STARTPIPE
-            @_ = result
-          else
+          if mode == :ENDPIPE || mode == :FORK
             if !result.nil?
               pp result
             end
           end
+          @_ = result
+          @workspace.evaluate(nil, "_ = @_")
         end
       rescue SyntaxError, NameError => e
         line = "\"" + line.gsub("\"", "\\\"") + "\""
@@ -131,13 +131,13 @@ class Esh
             stdin.close()
             result = stdout.read
           end
-          if mode == :PIPE || mode == :STARTPIPE
-            @_ = result
-          else
+          if mode == :ENDPIPE || mode == :FORK
             if !result.nil?
               puts(result)
             end
           end
+          @_ = result
+          @workspace.evaluate(nil, "_ = @_")
         end
         @active_pid = nil
       end
@@ -167,12 +167,9 @@ class Esh
         end
       end
 
-      @_ = nil
-
       if line.include?(';')
         parts = line.split(';')
         for part in parts
-          @_ = nil
           shell_eval(part)
         end
       elsif line.include?(' | ')
