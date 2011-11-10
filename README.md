@@ -32,7 +32,7 @@ http://jorgebernal.info/2009/11/18/fixing-snow-leopard-ruby-readline/
     $ x = "."
     $ ls #{x}
     README esh.rb
-    $ ls | _.split("\n").size
+    $ ls | split("\n").size
     2
     $ [1,2,3]
     [1, 2, 3]

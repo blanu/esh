@@ -99,10 +99,13 @@ class Esh
         elsif line.match /^cd\s/
           Dir.chdir File.expand_path(line.split(" ", 2)[1].strip)
         else
-          result = @workspace.evaluate(nil, line)
-          if mode == :PIPE
+          if mode == :PIPE || mode == :ENDPIPE
+            result = @workspace.evaluate(nil, "@_.instance_eval { #{line} }")
+          else
+            result = @workspace.evaluate(nil, line)
+          end
+          if mode == :PIPE || mode == :STARTPIPE
             @_ = result
-            @workspace.evaluate(nil, "_ = \"#{result}\"")
           else
             if !result.nil?
               pp result
@@ -128,9 +131,8 @@ class Esh
             stdin.close()
             result = stdout.read
           end
-          if mode == :PIPE
+          if mode == :PIPE || mode == :STARTPIPE
             @_ = result
-            @workspace.evaluate(nil, "_ = \"#{result}\"")
           else
             if !result.nil?
               puts(result)
@@ -175,10 +177,11 @@ class Esh
         end
       elsif line.include?(' | ')
         parts = line.split(' | ')
-        for part in parts.slice(0,parts.size()-1) # Eval all but last part, piping result into next part
+        shell_eval(parts[0], :STARTPIPE) # Eval first part, piping result into next part
+        for part in parts.slice(1, parts.size-2) # Eval all but last part, piping previus result in this part and this result into next part
           shell_eval(part, :PIPE)
         end
-        shell_eval(parts[parts.size()-1], :ENDPIPE) # Eval last part and print result
+        shell_eval(parts[parts.size-1], :ENDPIPE) # Eval last part and print result
       else
         shell_eval(line)
       end
