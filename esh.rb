@@ -8,6 +8,7 @@ require "irb"
 require "irb/completion"
 
 class Esh
+  attr_reader :jobs
 
   def initialize()
     @active_pid = nil
@@ -61,13 +62,15 @@ class Esh
     end
   end
 
-  def bg(job=0)
+  def bg(*a)
+    job = a[0] || -1
     pid = @jobs[job]
     Process.kill "CONT", pid
     return nil
   end
 
-  def fg(job=0)
+  def fg(*a)
+    job = a[0] || -1
     pid = @jobs[job]
     bg job
     @active_pid = pid
