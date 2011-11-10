@@ -27,17 +27,21 @@ http://jorgebernal.info/2009/11/18/fixing-snow-leopard-ruby-readline/
 
     $ 1+2
     3
-    
+
+
     $ ls
     README esh.rb
+
 
     $ x = "."
     $ ls #{x}
     README esh.rb
-    
+
+
     $ ls | _.split("\n").size
     2
-    
+
+
     $ [1,2,3]
     [1, 2, 3]
     $ ['a', 'b', 'c'].join("\n")
@@ -48,7 +52,8 @@ http://jorgebernal.info/2009/11/18/fixing-snow-leopard-ruby-readline/
     c
     $ ['a', 'b', 'c'].join("\n") | wc
            2       3       5
-    
+
+
     $ jobs
     []
     $ ping google.com
