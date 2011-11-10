@@ -8,15 +8,23 @@ require "irb"
 require "irb/completion"
 
 class Esh
+
   def initialize()
     @active_pid = nil
+    @jobs = []
     stty_save = `stty -g`.chomp
     #trap("INT") { system "stty", stty_save }
-    ["INT", "TSTP"].each do |sig|
-      trap(sig) do
-        if !@active_pid.nil?
-          Process.kill sig, @active_pid
-        end
+    trap("INT") do
+      if !@active_pid.nil?
+        Process.kill "INT", @active_pid
+      end
+    end
+
+    trap("TSTP") do
+      if !@active_pid.nil?
+        Process.kill "TSTP", @active_pid
+        @jobs << @active_pid
+        @active_pid = nil
       end
     end
 
@@ -25,7 +33,7 @@ class Esh
 
     IRB.setup self
     IRB.conf[:MAIN_CONTEXT] = IRB::Irb.new.context
-    @workspace = IRB::WorkSpace.new(nil, @scope.binding)
+    @workspace = IRB::WorkSpace.new(self, @scope.binding)
     IRB.conf[:MAIN_CONTEXT].workspace = @workspace
     if Readline.respond_to?("basic_word_break_characters=")
       Readline.basic_word_break_characters= " \t\n\"\\'`><=;|&{("
@@ -37,15 +45,35 @@ class Esh
       else
         irb_completions = IRB::InputCompletor::CompletionProc.call(s)
       end
-      s = File.expand_path(s)
+      if s =~ /\/$/
+        last = "/"
+      else
+        last = ""
+      end
+      s = File.expand_path(s) + last
       Dir[s+'*'].map do |x|
         if File.directory? x
           x + "/"
         else
           x
         end
-      end.grep(/^#{Regexp.escape(s)}/) + irb_completions
+      end.grep(/^#{Regexp.escape(s)}/).select { |x| x != s + "/" } + irb_completions
     end
+  end
+
+  def bg(job=0)
+    pid = @jobs[job]
+    Process.kill "CONT", pid
+    return nil
+  end
+
+  def fg(job=0)
+    pid = @jobs[job]
+    bg job
+    @active_pid = pid
+    Process.waitpid @active_pid, Process::WUNTRACED
+    @jobs.delete @active_pid
+    return nil
   end
 
   def shell_attempt
@@ -63,9 +91,9 @@ class Esh
   def shell_eval(line, mode=:FORK)
     shell_attempt() do
       begin
-        if line.match /^cd$/
+        if line.match /^cd\s*$/
           Dir.chdir
-        elsif line.match /^cd /
+        elsif line.match /^cd\s/
           Dir.chdir File.expand_path(line.split(" ", 2)[1].strip)
         else
           result = @workspace.evaluate(nil, line)
