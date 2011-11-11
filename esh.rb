@@ -51,12 +51,12 @@ class Esh
       else
         last = ""
       end
-      s = File.expand_path(s) + last
-      Dir[s+'*'].map do |x|
+      expanded = File.expand_path(s) + last
+      Dir[expanded+'*'].map do |x|
         if File.directory? x
-          x + "/"
+          x.sub(expanded, s) + "/"
         else
-          x
+          x.sub(expanded, s)
         end
       end.grep(/^#{Regexp.escape(s)}/).select { |x| x != s + "/" } + irb_completions
     end
