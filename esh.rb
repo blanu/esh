@@ -6,6 +6,10 @@ require "socket"
 require "pp"
 require "irb"
 require "irb/completion"
+begin
+  require "~/.esh.rb"
+rescue LoadError
+end
 
 class Esh
   attr_reader :jobs
@@ -58,7 +62,7 @@ class Esh
         else
           x.sub(expanded, s)
         end
-      end.grep(/^#{Regexp.escape(s)}/).select { |x| x != s + "/" } + irb_completions
+      end.grep(/^#{Regexp.escape(s)}/) + irb_completions
     end
   end
 
@@ -85,8 +89,11 @@ class Esh
     rescue Errno::ENOENT => e
       puts e.message
     rescue StandardError => e
-      puts "FAIL"
-      p e
+      puts "#{e.class}: #{e.message}"
+      bt = e.backtrace.map do |x|
+        "        from #{x}\n"
+      end
+      puts bt
     end
   end
 
