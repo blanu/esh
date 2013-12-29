@@ -1,4 +1,5 @@
 #! /usr/bin/env ruby
+# -*- coding: utf-8 -*-
 require "readline"
 require "open4"
 require "etc"
@@ -11,12 +12,24 @@ begin
 rescue LoadError
 end
 
+$histfile = "~/.zhistory"
+
 class Esh
+  class << self
+    def const_missing(name)
+      if ENV.has_key? name.to_s
+        return ENV[name.to_s]
+      end
+      super.const_missing name
+    end
+  end
+
   attr_reader :jobs
 
   def initialize()
     @active_pid = nil
     @jobs = []
+    @zhistory = false
     stty_save = `stty -g`.chomp
     #trap("INT") { system "stty", stty_save }
     trap("INT") do
@@ -69,7 +82,11 @@ class Esh
   def bg(*a)
     job = a[0] || -1
     pid = @jobs[job]
-    Process.kill "CONT", pid
+    if pid.nil?
+      puts "no such job"
+    else
+      Process.kill "CONT", pid
+    end
     return nil
   end
 
@@ -77,10 +94,19 @@ class Esh
     job = a[0] || -1
     pid = @jobs[job]
     bg job
-    @active_pid = pid
-    Process.waitpid @active_pid, Process::WUNTRACED
-    @jobs.delete @active_pid
+    if !pid.nil?
+      @active_pid = pid
+      Process.waitpid @active_pid, Process::WUNTRACED
+      @jobs.delete @active_pid
+    end
     return nil
+  end
+
+  def method_missing(name)
+    if ENV.has_key? name.to_s
+      return ENV[name.to_s]
+    end
+    super.method_missing name
   end
 
   def shell_attempt
@@ -119,12 +145,17 @@ class Esh
           end
         end
       rescue SyntaxError, NameError => e
+        # evaluate as a string, to handle interpolation
         line = "\"" + line.gsub("\"", "\\\"") + "\""
         line = @workspace.evaluate(nil, line)
 
         if mode == :FORK
           @active_pid = Process.fork do
-            exec line
+            begin
+              exec line
+            rescue => e
+              puts e.message
+            end
           end
 
           Process.waitpid @active_pid, Process::WUNTRACED
@@ -153,13 +184,21 @@ class Esh
   def repl()
     history = []
     begin
-      File.open(File.expand_path("~/.esh_history")) do |f|
-        history = f.readlines.map { |x| x.chomp }.select { |x| !x.empty? }
+      File.open(File.expand_path($histfile)) do |f|
+        history = f.readlines.map do |x|
+          match = x.match /: (\d+):(\d+);(.*)/
+          if match
+            @zhistory = true
+            timestamp, _, x = match.captures
+          end
+          x.chomp
+        end.select { |x| !x.empty? }
       end
     rescue
     end
     Readline::HISTORY.push(*history)
-    while line = Readline.readline("#{Etc.getlogin}@\x01\e[31m\x02#{Socket.gethostname.split(".")[0]}\x01\e[0m\x02:#{Dir.pwd.sub(ENV["HOME"], "~")}$ ", true)
+
+    while line = Readline.readline("#{Etc.getlogin}@\x01\e[31m\x02#{Socket.gethostname.split(".")[0]}\x01\e[0m\x02:#{Dir.pwd.sub(ENV["HOME"], "~")} ❯ ", true)
       history << line
 
       if ((/^\s*$/ =~ line) ||
@@ -167,8 +206,11 @@ class Esh
         Readline::HISTORY.pop
         history.pop
       else
-        File.open(File.expand_path("~/.esh_history"), "ab+") do |f|
-          f << line + "\n"
+        File.open(File.expand_path($histfile), "ab+") do |f|
+          if @zhistory
+            f << ": #{Time.now.to_i}:0;"
+          end
+          f << "#{line}\n"
           f.flush
         end
       end
