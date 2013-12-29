@@ -69,13 +69,15 @@ class Esh
         last = ""
       end
       expanded = File.expand_path(s) + last
-      Dir[expanded+'*'].map do |x|
+      dirs = Dir[expanded+'*'].map do |x|
         if File.directory? x
           x.sub(expanded, s) + "/"
         else
           x.sub(expanded, s)
         end
-      end.grep(/^#{Regexp.escape(s)}/) + irb_completions
+      end.grep(/^#{Regexp.escape(s)}/)
+      bins = path_binaries.grep(/^#{Regexp.escape(s)}/)
+      bins + dirs + irb_completions
     end
   end
 
@@ -102,11 +104,42 @@ class Esh
     return nil
   end
 
-  def method_missing(name)
+  def method_missing(*args)
+    pp args.join(" ")
+    name = args[0]
     if ENV.has_key? name.to_s
       return ENV[name.to_s]
     end
-    super.method_missing name
+    return nil
+  end
+
+  def path_binaries
+    PATH.split(":").map do |dirname|
+      begin
+        Dir.entries(dirname).select { |f| File.executable? File.join(dirname, f) }
+      rescue
+        []
+      end
+    end.flatten
+  end
+
+  def path_find(*a)
+    name = a[0]
+    PATH.split(":").each do |dirname|
+      begin
+        dir = Dir.new(dirname)
+        dir.each do |f|
+          if f == name
+            f = File.join(dir.path, f)
+            if File.executable? f
+              return f
+            end
+          end
+        end
+      rescue
+      end
+    end
+    return nil
   end
 
   def shell_attempt
@@ -127,32 +160,26 @@ class Esh
   def shell_eval(line, mode=:FORK)
     shell_attempt() do
       result = nil
-      begin
-        if line.match /^cd\s*$/
+      command = line.split(" ")[0]
+      args = (line.split(" ", 2)[1] || "").strip
+      bin = path_find(command)
+      # to catch invalid ruby: rescue SyntaxError, NameError => e
+      if command == "cd"
+        if not args
           Dir.chdir
-        elsif line.match /^cd\s/
-          Dir.chdir File.expand_path(line.split(" ", 2)[1].strip)
         else
-          if mode == :PIPE || mode == :ENDPIPE
-            result = @workspace.evaluate(nil, "@_.instance_eval { #{line} }")
-          else
-            result = @workspace.evaluate(nil, line)
-          end
-          if mode == :ENDPIPE || mode == :FORK
-            if !result.nil?
-              pp result
-            end
-          end
+          Dir.chdir File.expand_path(args)
         end
-      rescue SyntaxError, NameError => e
+      elsif bin
         # evaluate as a string, to handle interpolation
-        line = "\"" + line.gsub("\"", "\\\"") + "\""
-        line = @workspace.evaluate(nil, line)
+        args = "\"" + args.gsub("\"", "\\\"") + "\""
+        args = @workspace.evaluate(nil, args)
+        args = args.split(" ")
 
         if mode == :FORK
           @active_pid = Process.fork do
             begin
-              exec line
+              exec command, *args
             rescue => e
               puts e.message
             end
@@ -175,6 +202,17 @@ class Esh
           end
         end
         @active_pid = nil
+      else
+        if mode == :PIPE || mode == :ENDPIPE
+          result = @workspace.evaluate(nil, "@_.instance_eval { #{line} }")
+        else
+          result = @workspace.evaluate(nil, line)
+        end
+        if mode == :ENDPIPE || mode == :FORK
+          if !result.nil?
+            pp result
+          end
+        end
       end
       @_ = result
       @workspace.evaluate(nil, "_ = @_")
