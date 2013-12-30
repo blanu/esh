@@ -110,7 +110,7 @@ class Esh
     if ENV.has_key? name.to_s
       return ENV[name.to_s]
     end
-    return nil
+    super.method_missing *args
   end
 
   def path_binaries
@@ -160,22 +160,61 @@ class Esh
   def shell_eval(line, mode=:FORK)
     shell_attempt() do
       result = nil
-      command = line.split(" ")[0]
+      ruby = false
+      line = line.strip
+      if line.start_with? "$"
+        ruby = true
+        line = line.split("$", 2)[1]
+      elsif line.include?("=")
+        ruby = true
+      else
+        line.gsub!('\\') { '\\\\' }
+        line.gsub!('"') { '\\' + '"' }
+        # evaluate as a string, to handle interpolation
+        line = "\"" + line + "\""
+        line = @workspace.evaluate(nil, line)
+      end
+
+      command = line.split(" ")[0] || ""
       args = (line.split(" ", 2)[1] || "").strip
-      bin = path_find(command)
-      # to catch invalid ruby: rescue SyntaxError, NameError => e
-      if command == "cd"
-        if not args
+      args = args.scan(/\s?([^ "]+)\s?|"([^"]*)"/).map { |x, y| x or y }
+
+      ruby_command = false
+      begin
+        ruby_command = eval "defined? #{command}"
+      rescue SyntaxError
+      end
+
+      if ruby_command.nil? && ((mode == :PIPE) || (mode == :ENDPIPE))
+        begin
+          ruby_command = eval "defined? @_.#{command}"
+        rescue SyntaxError
+        end
+      end
+
+      if ruby_command == "expression"
+        ruby_command = false
+      end
+
+      if not ruby_command
+        if File.executable? command
+          bin = command
+        else
+          bin = path_find(command)
+        end
+      end
+
+      if !ruby_command and !bin
+        ruby = true
+      end
+
+      if command == "cd" && !ruby
+        if args.empty?
           Dir.chdir
         else
-          Dir.chdir File.expand_path(args)
+          Dir.chdir File.expand_path(args[0])
         end
-      elsif bin
-        # evaluate as a string, to handle interpolation
-        args = "\"" + args.gsub("\"", "\\\"") + "\""
-        args = @workspace.evaluate(nil, args)
-        args = args.split(" ")
-
+      elsif bin && !ruby
         if mode == :FORK
           @active_pid = Process.fork do
             begin
@@ -203,13 +242,28 @@ class Esh
         end
         @active_pid = nil
       else
-        if mode == :PIPE || mode == :ENDPIPE
-          result = @workspace.evaluate(nil, "@_.instance_eval { #{line} }")
-        else
-          result = @workspace.evaluate(nil, line)
+        if !ruby
+          args = args.map do |a|
+            "\"#{a}\""
+          end.join(", ")
+          line = "#{command} #{args}"
         end
+
+        begin
+          if mode == :PIPE || mode == :ENDPIPE
+            result = @workspace.evaluate(nil, "@_.instance_eval { #{line} }")
+          else
+            result = @workspace.evaluate(nil, line)
+          end
+        rescue Exception => e
+          puts e.message
+          result = nil
+        end
+
         if mode == :ENDPIPE || mode == :FORK
-          if !result.nil?
+          if !ruby
+            puts result
+          else
             pp result
           end
         end
@@ -258,8 +312,8 @@ class Esh
         for part in parts
           shell_eval(part)
         end
-      elsif line.include?(' | ')
-        parts = line.split(' | ')
+      elsif line.include? ' | '
+        parts = line.split ' | '
         shell_eval(parts[0], :STARTPIPE) # Eval first part, piping result into next part
         for part in parts.slice(1, parts.size-2) # Eval all but last part, piping previus result in this part and this result into next part
           shell_eval(part, :PIPE)
